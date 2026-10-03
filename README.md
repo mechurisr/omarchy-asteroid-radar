@@ -29,6 +29,18 @@ panel draws every pass in 3D around Earth and the Moon, and you can rotate it.
 omarchy plugin add https://github.com/mechurisr/omarchy-asteroid-radar.git --enable
 ```
 
+## Removing
+
+```bash
+omarchy plugin remove mechurisr.asteroid-radar
+```
+
+The cached data stays behind. Delete it too if you want nothing left:
+
+```bash
+rm -f ~/.cache/omarchy-asteroid-radar.json
+```
+
 ## Controls
 
 | Input | Action |
