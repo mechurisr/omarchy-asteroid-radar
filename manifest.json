@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "mechurisr.asteroid-radar",
+  "name": "Asteroid Radar",
+  "version": "1.0.0",
+  "author": "chanwook lee",
+  "license": "MIT",
+  "description": "A 3D radar of near-Earth asteroids passing within ~20 lunar distances this week, from JPL's close-approach and Horizons APIs.",
+  "homepage": "https://github.com/mechurisr/omarchy-asteroid-radar",
+  "repository": "https://github.com/mechurisr/omarchy-asteroid-radar",
+  "keywords": [
+    "space",
+    "asteroids",
+    "nasa",
+    "jpl",
+    "neo",
+    "3d"
+  ],
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Asteroid Radar",
+    "description": "Distance of the next close approach in the bar; a rotatable 3D map of each pass around Earth and the Moon in the panel.",
+    "category": "Info",
+    "aliases": [
+      "asteroids",
+      "neo",
+      "space"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshHours": 6,
+      "maxDistanceLd": 20,
+      "maxObjects": 15
+    },
+    "schema": [
+      {
+        "key": "refreshHours",
+        "type": "integer",
+        "label": "Refresh interval (hours)",
+        "min": 1,
+        "max": 48,
+        "step": 1,
+        "defaultValue": 6
+      },
+      {
+        "key": "maxDistanceLd",
+        "type": "integer",
+        "label": "Maximum approach distance (lunar distances)",
+        "min": 2,
+        "max": 80,
+        "step": 1,
+        "defaultValue": 20
+      },
+      {
+        "key": "maxObjects",
+        "type": "integer",
+        "label": "Maximum objects shown",
+        "min": 1,
+        "max": 30,
+        "step": 1,
+        "defaultValue": 15
+      }
+    ]
+  }
+}
