@@ -35,7 +35,7 @@ function parseCad(text) {
   for (var j = 0; j < data.data.length; j++) {
     var r = data.data[j]
     var des = String(r[idx.des] || "").trim()
-    if (!des) continue
+    if (!isSafeDesignation(des)) continue
     var h = parseFloat(r[idx.h])
     var diameter = parseFloat(r[idx.diameter])
     out.push({
@@ -52,6 +52,13 @@ function parseCad(text) {
     })
   }
   return out
+}
+
+// Designations go into a Horizons query (COMMAND='DES=<des>;'), so only the
+// characters real ones use are let through: "2026 RP39", "99942", "P/2019 LD2".
+// Anything else would change the query rather than name an object.
+function isSafeDesignation(des) {
+  return /^[A-Za-z0-9 \/-]{1,32}$/.test(String(des))
 }
 
 // Diameter from absolute magnitude, assuming a typical 0.14 albedo. Real
