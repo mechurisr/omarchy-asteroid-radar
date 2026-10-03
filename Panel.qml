@@ -629,6 +629,8 @@ Panel {
                   y: -height / 2
                   Text {
                     text: parent.parent.d ? parent.parent.d.name : ""
+                    // Names come from the JPL API; never parse them as rich text.
+                    textFormat: Text.PlainText
                     color: parent.parent.d ? parent.parent.d.color : root.fg
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
@@ -717,6 +719,8 @@ Panel {
 
               Text {
                 text: infoCard.a ? infoCard.a.name : ""
+                // Names come from the JPL API; never parse them as rich text.
+                textFormat: Text.PlainText
                 color: infoCard.a && infoCard.a.distLd < 1 ? root.warn : root.accent
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall
@@ -826,6 +830,8 @@ Panel {
                   width: root.colName
                   elide: Text.ElideRight
                   text: modelData.name
+                  // Names come from the JPL API; never parse them as rich text.
+                  textFormat: Text.PlainText
                   color: modelData.distLd < 1 ? root.warn : (isSelected ? root.accent : root.fg)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.bodySmall
