@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
@@ -62,6 +63,15 @@ Panel {
 
   readonly property var selectedItem: byTime.length > 0
     ? byTime[Math.max(0, Math.min(selected, byTime.length - 1))] : null
+
+  // First row of byTime still to come; byTime.length when all have passed.
+  // Uses the same test as the list's faded rows, so the divider sits
+  // exactly between faded and bright.
+  readonly property int nowIndex: {
+    for (var i = 0; i < byTime.length; i++)
+      if (!(byTime[i].approachAt < now)) return i
+    return byTime.length
+  }
 
   readonly property var nextApproach: {
     for (var i = 0; i < byTime.length; i++)
@@ -359,6 +369,40 @@ Panel {
   readonly property real colDist: Style.space(90)
   readonly property real colSize: Style.space(70)
 
+  // The list scrolls past this many rows, or sooner if the panel would
+  // otherwise run off the screen (maxObjects goes up to 30).
+  readonly property int listVisibleRows: 10
+
+  // "now" rule in the approach list: a short label, then a hairline.
+  component NowDivider: Item {
+    width: parent ? parent.width : 0
+    height: visible ? nowLabel.implicitHeight + Style.space(6) : 0
+
+    Text {
+      id: nowLabel
+      anchors.left: parent.left
+      anchors.leftMargin: Style.space(4)
+      anchors.verticalCenter: parent.verticalCenter
+      text: "NOW"
+      color: root.accent
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      font.bold: true
+      font.letterSpacing: 1
+    }
+
+    Rectangle {
+      anchors.left: nowLabel.right
+      anchors.leftMargin: Style.space(6)
+      anchors.right: parent.right
+      anchors.rightMargin: Style.space(4)
+      anchors.verticalCenter: parent.verticalCenter
+      height: 1
+      color: root.accent
+      opacity: 0.6
+    }
+  }
+
   KeyboardPanel {
     id: panel
     anchorItem: root.anchorItem
@@ -399,6 +443,7 @@ Panel {
         // ---------------------------------------------------- header
 
         Item {
+          id: header
           width: parent.width
           height: title.implicitHeight
 
@@ -431,6 +476,7 @@ Panel {
         // ---------------------------------------------------- radar
 
         Item {
+          id: radarBox
           width: parent.width
           height: Math.round(width * 0.72)
 
@@ -759,7 +805,7 @@ Panel {
           }
         }
 
-        PanelSeparator { width: parent.width }
+        PanelSeparator { id: listSeparator; width: parent.width }
 
         // ---------------------------------------------------- list
 
@@ -769,6 +815,7 @@ Panel {
 
           // Column headings; widths are shared with the rows below.
           Row {
+            id: headings
             visible: root.byTime.length > 0
             leftPadding: Style.space(4)
             bottomPadding: Style.space(4)
@@ -805,79 +852,128 @@ Panel {
             text: root.lastError ? "No data — press r to retry" : "Nothing passes within " + root.maxDistLd + " LD this week"
           }
 
-          Repeater {
-            model: root.byTime
+          // ListView, not a Column: it owns the scroll position, so j/k can
+          // keep the selected row in view with positionViewAtIndex.
+          ListView {
+            id: approachList
+            readonly property real rowHeight: rowProbe.implicitHeight + Style.space(6)
+            readonly property real screenRoom: panel.availableCardHeight > 0
+              ? panel.availableCardHeight - panel.verticalContentInset
+                - header.height - radarBox.height - listSeparator.height - headings.height
+                - helpLine.height - column.spacing * 4
+              : Infinity
+            width: parent.width
+            height: Math.min(contentHeight, rowHeight * root.listVisibleRows,
+                             Math.max(rowHeight * 3, screenRoom))
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
 
-            Rectangle {
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+            model: root.byTime
+            currentIndex: root.selected
+            // Deferred a turn: a refresh swaps the model, which resets the
+            // view under a call made straight from the signal.
+            onCurrentIndexChanged: Qt.callLater(keepCurrentVisible)
+            onCountChanged: Qt.callLater(keepCurrentVisible)
+            function keepCurrentVisible() {
+              if (currentIndex >= 0 && currentIndex < count)
+                positionViewAtIndex(currentIndex, ListView.Contain)
+            }
+
+            delegate: Column {
+              id: entry
               required property var modelData
               required property int index
-              readonly property bool isSelected: index === root.selected
-              readonly property bool passed: modelData.approachAt < root.now
-              width: column.width
-              height: rowText.implicitHeight + Style.space(6)
-              radius: Style.space(4)
-              color: isSelected ? Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.08) : "transparent"
+              width: ListView.view.width
 
-              Row {
-                id: rowText
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.left
-                anchors.leftMargin: Style.space(4)
-                spacing: Style.space(8)
-                opacity: passed ? 0.5 : 1
+              // Between the last passed and the first upcoming object; under
+              // the last row when everything has passed.
+              NowDivider { visible: entry.index === root.nowIndex && entry.index > 0 }
 
-                Text {
-                  width: root.colName
-                  elide: Text.ElideRight
-                  text: modelData.name
-                  // Names come from the JPL API; never parse them as rich text.
-                  textFormat: Text.PlainText
-                  color: modelData.distLd < 1 ? root.warn : (isSelected ? root.accent : root.fg)
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  font.bold: isSelected
+              Rectangle {
+                id: rowBox
+                readonly property bool isSelected: entry.index === root.selected
+                readonly property bool passed: entry.modelData.approachAt < root.now
+                width: parent.width
+                height: rowText.implicitHeight + Style.space(6)
+                radius: Style.space(4)
+                color: rowBox.isSelected ? Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.08) : "transparent"
+
+                Row {
+                  id: rowText
+                  anchors.verticalCenter: parent.verticalCenter
+                  anchors.left: parent.left
+                  anchors.leftMargin: Style.space(4)
+                  spacing: Style.space(8)
+                  opacity: rowBox.passed ? 0.5 : 1
+
+                  Text {
+                    width: root.colName
+                    elide: Text.ElideRight
+                    text: entry.modelData.name
+                    // Names come from the JPL API; never parse them as rich text.
+                    textFormat: Text.PlainText
+                    color: entry.modelData.distLd < 1 ? root.warn : (rowBox.isSelected ? root.accent : root.fg)
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    font.bold: rowBox.isSelected
+                  }
+                  Text {
+                    width: root.colTime
+                    text: Model.fmtLocal(entry.modelData.approachAt)
+                    color: root.fg
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Text {
+                    width: root.colWhen
+                    text: Model.fmtRelative(entry.modelData.approachAt, root.now)
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Text {
+                    width: root.colDist
+                    horizontalAlignment: Text.AlignRight
+                    text: Model.fmtLd(entry.modelData.distLd)
+                    color: entry.modelData.distLd < 1 ? root.warn : root.fg
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Text {
+                    width: root.colSize
+                    horizontalAlignment: Text.AlignRight
+                    text: Model.fmtSize(entry.modelData.diameterKm)
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
                 }
-                Text {
-                  width: root.colTime
-                  text: Model.fmtLocal(modelData.approachAt)
-                  color: root.fg
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                }
-                Text {
-                  width: root.colWhen
-                  text: Model.fmtRelative(modelData.approachAt, root.now)
-                  color: root.dim
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                }
-                Text {
-                  width: root.colDist
-                  horizontalAlignment: Text.AlignRight
-                  text: Model.fmtLd(modelData.distLd)
-                  color: modelData.distLd < 1 ? root.warn : root.fg
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                }
-                Text {
-                  width: root.colSize
-                  horizontalAlignment: Text.AlignRight
-                  text: Model.fmtSize(modelData.diameterKm)
-                  color: root.dim
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
+
+                MouseArea {
+                  anchors.fill: parent
+                  onClicked: { root.selected = entry.index; radar.requestPaint() }
                 }
               }
 
-              MouseArea {
-                anchors.fill: parent
-                onClicked: { root.selected = index; radar.requestPaint() }
-              }
+              NowDivider { visible: root.nowIndex === root.byTime.length && entry.index === root.byTime.length - 1 }
             }
+          }
+
+          // Sizes a list row before any delegate exists.
+          Text {
+            id: rowProbe
+            visible: false
+            text: "0"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
           }
         }
 
         Text {
+          id: helpLine
           width: parent.width
           horizontalAlignment: Text.AlignHCenter
           color: root.dim

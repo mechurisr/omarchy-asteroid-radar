@@ -19,7 +19,9 @@ panel draws every pass in 3D around Earth and the Moon, and you can rotate it.
 - **Info card:** minimum distance (in lunar distances and km), relative speed,
   estimated size, and the current distance of the selected object.
 - **Approach list:** when each object makes its closest approach, in your local
-  time and as a countdown, plus minimum distance and estimated size.
+  time and as a countdown, plus minimum distance and estimated size. A "now"
+  line splits passes already over from those still to come, and the list
+  scrolls past ten rows so the panel stays on screen.
 - **Time scrub:** step the whole scene forward or back three hours at a time to
   watch the passes play out.
 
