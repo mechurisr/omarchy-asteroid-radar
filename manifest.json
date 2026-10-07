@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "mechurisr.asteroid-radar",
   "name": "Asteroid Radar",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "chanwook lee",
   "license": "MIT",
   "description": "A 3D radar of near-Earth asteroids passing within ~20 lunar distances this week, from JPL's close-approach and Horizons APIs.",
