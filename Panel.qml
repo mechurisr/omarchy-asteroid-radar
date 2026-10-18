@@ -4,6 +4,7 @@ import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
@@ -356,11 +357,11 @@ Panel {
 
   // ------------------------------------------------------------ the panel
 
-  readonly property color fg: root.bar ? root.bar.foreground : Color.foreground
+  readonly property color fg: root.bar ? root.bar.foreground : Commons.Color.foreground
   readonly property string fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
   readonly property color dim: Qt.darker(fg, 1.6)
-  readonly property color accent: Color.accent
-  readonly property color warn: Color.urgent
+  readonly property color accent: Commons.Color.accent
+  readonly property color warn: Commons.Color.urgent
 
   // Approach list column widths, shared by the heading row and each row.
   readonly property real colName: Style.space(110)
@@ -754,7 +755,7 @@ Panel {
             width: infoColumn.implicitWidth + Style.space(20)
             height: infoColumn.implicitHeight + Style.space(14)
             radius: Style.space(6)
-            color: Qt.rgba(Color.popups.background.r, Color.popups.background.g, Color.popups.background.b, 0.78)
+            color: Qt.rgba(Commons.Color.popups.background.r, Commons.Color.popups.background.g, Commons.Color.popups.background.b, 0.78)
             border.width: 1
             border.color: Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.15)
 
