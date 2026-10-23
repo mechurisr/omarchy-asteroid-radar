@@ -24,6 +24,9 @@ panel draws every pass in 3D around Earth and the Moon, and you can rotate it.
   scrolls past ten rows so the panel stays on screen.
 - **Time scrub:** step the whole scene forward or back three hours at a time to
   watch the passes play out.
+- **Hologram mode:** a cyan monochrome look with a glow on the radar,
+  scanlines, and an occasional shine and flicker. Toggle it with the `HOLO`
+  button in the header or `g`; the choice is remembered across restarts.
 
 ## Install
 
@@ -40,7 +43,7 @@ omarchy plugin remove mechurisr.asteroid-radar
 The cached data stays behind. Delete it too if you want nothing left:
 
 ```bash
-rm -f ~/.cache/omarchy-asteroid-radar.json
+rm -f ~/.cache/omarchy-asteroid-radar.json ~/.cache/omarchy-asteroid-radar-ui.json
 ```
 
 ## Controls
@@ -56,6 +59,7 @@ rm -f ~/.cache/omarchy-asteroid-radar.json
 | `[` / `]` | Move time back / forward by 3 hours |
 | `s` | Switch between log and linear distance scale |
 | `Space` | Toggle auto-rotation |
+| `g` | Toggle hologram mode |
 | `0` | Reset the view and time |
 | `r` | Fetch fresh data |
 | `Esc` | Close |
@@ -70,6 +74,7 @@ so a panel left open does not keep redrawing.
 | `refreshHours` | `6` | How often to fetch new data |
 | `maxDistanceLd` | `20` | Only list approaches closer than this many lunar distances |
 | `maxObjects` | `15` | Upper limit on objects shown, nearest first |
+| `hologram` | `false` | Hologram mode until it is toggled in the panel |
 
 ## Data
 
@@ -94,12 +99,14 @@ within about a factor of two. Measured diameters are used when JPL has one.
 ```bash
 qs -p /usr/share/omarchy/shell ipc call mechurisr.asteroid-radar open|close|toggle|refresh|status
 qs -p /usr/share/omarchy/shell ipc call mechurisr.asteroid-radar spin on|off|toggle
+qs -p /usr/share/omarchy/shell ipc call mechurisr.asteroid-radar holo on|off|toggle
 ```
 
 ## Requirements
 
 `curl`, which a stock Omarchy install already has. Rendering uses
-`QtQuick.Shapes`, which ships with Qt, so nothing else needs installing.
+`QtQuick.Shapes` and `QtQuick.Effects`, which ship with Qt, so nothing else
+needs installing.
 
 ## License
 

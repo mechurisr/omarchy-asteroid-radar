@@ -36,7 +36,8 @@
     "defaults": {
       "refreshHours": 6,
       "maxDistanceLd": 20,
-      "maxObjects": 15
+      "maxObjects": 15,
+      "hologram": false
     },
     "schema": [
       {
@@ -65,6 +66,12 @@
         "max": 30,
         "step": 1,
         "defaultValue": 15
+      },
+      {
+        "key": "hologram",
+        "type": "boolean",
+        "label": "Hologram look by default (toggle with HOLO or g)",
+        "defaultValue": false
       }
     ]
   }

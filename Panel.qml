@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
@@ -35,6 +36,14 @@ Panel {
   readonly property int refreshHours: Math.max(1, parseInt(setting("refreshHours", 6), 10) || 6)
   readonly property real maxDistLd: Math.max(2, Math.min(80, parseFloat(setting("maxDistanceLd", 20)) || 20))
   readonly property int maxObjects: Math.max(1, Math.min(30, parseInt(setting("maxObjects", 15), 10) || 15))
+
+  // Hologram mode: a cyan monochrome palette, glow on the radar, scanlines,
+  // an occasional shine and flicker. Toggled from the header, g or IPC; that
+  // choice is kept in its own small file, and the setting is only the default
+  // until something is chosen.
+  property string holoChoice: ""    // "", "on" or "off"
+  readonly property bool hologram: holoChoice === ""
+    ? String(setting("hologram", false)) === "true" : holoChoice === "on"
 
   // ------------------------------------------------------------ state
 
@@ -133,6 +142,13 @@ Panel {
     selected = (selected + delta + byTime.length) % byTime.length
     radar.requestPaint()
   }
+
+  function setHologram(on) {
+    holoChoice = on ? "on" : "off"
+    uiFile.setText(JSON.stringify({ hologram: on }))
+  }
+
+  onHologramChanged: radar.requestPaint()
 
   function resetView() {
     timeOffset = 0
@@ -333,6 +349,44 @@ Panel {
     }
   }
 
+  FileView {
+    id: uiFile
+    path: Quickshell.env("HOME") + "/.cache/omarchy-asteroid-radar-ui.json"
+    atomicWrites: true
+    printErrors: false
+    onLoaded: {
+      try {
+        var data = JSON.parse(text())
+        if (typeof data.hologram === "boolean") root.holoChoice = data.hologram ? "on" : "off"
+      } catch (e) {}
+    }
+  }
+
+  // Hologram motion: every few seconds either a shine sweeps down the panel
+  // or the content flickers. Nothing runs between the two, so an open panel
+  // stays idle apart from these short bursts.
+  property real holoFlicker: 1
+
+  Timer {
+    id: holoTimer
+    interval: 3000
+    running: root.opened && root.hologram
+    repeat: true
+    onTriggered: {
+      interval = 4000 + Math.random() * 5000
+      if (Math.random() < 0.35) flicker.restart()
+      else sweep.restart()
+    }
+  }
+
+  SequentialAnimation {
+    id: flicker
+    NumberAnimation { target: root; property: "holoFlicker"; to: 0.45; duration: 40 }
+    NumberAnimation { target: root; property: "holoFlicker"; to: 0.95; duration: 60 }
+    NumberAnimation { target: root; property: "holoFlicker"; to: 0.65; duration: 40 }
+    NumberAnimation { target: root; property: "holoFlicker"; to: 1; duration: 120 }
+  }
+
   IpcHandler {
     target: root.ipcTarget
 
@@ -342,6 +396,10 @@ Panel {
     function hide(): void { root.close() }
     function toggle(): void { root.toggle() }
     function refresh(): void { root.refresh() }
+    function holo(mode: string): string {
+      root.setHologram(mode === "on" ? true : mode === "off" ? false : !root.hologram)
+      return root.hologram ? "on" : "off"
+    }
     function spin(mode: string): string {
       root.autoRotate = mode === "on" ? true : mode === "off" ? false : !root.autoRotate
       root.wake()
@@ -357,11 +415,12 @@ Panel {
 
   // ------------------------------------------------------------ the panel
 
-  readonly property color fg: root.bar ? root.bar.foreground : Commons.Color.foreground
+  readonly property color fg: hologram ? "#8eeeff" : (root.bar ? root.bar.foreground : Commons.Color.foreground)
   readonly property string fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
   readonly property color dim: Qt.darker(fg, 1.6)
-  readonly property color accent: Commons.Color.accent
-  readonly property color warn: Commons.Color.urgent
+  readonly property color accent: hologram ? "#e8fdff" : Commons.Color.accent
+  readonly property color warn: hologram ? "#ffa47e" : Commons.Color.urgent
+  readonly property color holoGlow: "#3fd8ff"
 
   // Approach list column widths, shared by the heading row and each row.
   readonly property real colName: Style.space(110)
@@ -428,6 +487,7 @@ Panel {
       }
       onTextKey: function(text) {
         if (text === "r") root.refresh()
+        else if (text === "g") root.setHologram(!root.hologram)
         else if (text === "s") { root.logScale = !root.logScale; radar.requestPaint() }
         else if (text === "]") { root.timeOffset += 3 * Model.HOUR_MS; radar.requestPaint() }
         else if (text === "[") { root.timeOffset -= 3 * Model.HOUR_MS; radar.requestPaint() }
@@ -440,6 +500,7 @@ Panel {
         id: column
         width: parent.width
         spacing: Style.space(10)
+        opacity: root.hologram ? 0.88 * root.holoFlicker : 1
 
         // ---------------------------------------------------- header
 
@@ -460,9 +521,42 @@ Panel {
             font.letterSpacing: 1.5
           }
 
-          Text {
+          Rectangle {
+            id: holoToggle
             anchors.right: parent.right
             anchors.rightMargin: Style.space(4)
+            anchors.verticalCenter: title.verticalCenter
+            width: holoLabel.implicitWidth + Style.space(12)
+            height: holoLabel.implicitHeight + Style.space(4)
+            radius: height / 2
+            color: root.hologram ? Qt.rgba(root.holoGlow.r, root.holoGlow.g, root.holoGlow.b, 0.15) : "transparent"
+            border.width: 1
+            border.color: root.hologram ? Qt.rgba(root.holoGlow.r, root.holoGlow.g, root.holoGlow.b, 0.7)
+              : Qt.rgba(root.fg.r, root.fg.g, root.fg.b, holoMouse.containsMouse ? 0.5 : 0.2)
+
+            Text {
+              id: holoLabel
+              anchors.centerIn: parent
+              text: "HOLO"
+              color: root.hologram ? root.accent : root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1
+            }
+
+            MouseArea {
+              id: holoMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.setHologram(!root.hologram)
+            }
+          }
+
+          Text {
+            anchors.right: holoToggle.left
+            anchors.rightMargin: Style.space(8)
             anchors.verticalCenter: title.verticalCenter
             color: root.lastError ? root.warn : root.dim
             font.family: root.fontFamily
@@ -488,6 +582,20 @@ Panel {
             id: radar
             anchors.fill: parent
             clip: true
+
+            // Hologram glow: a blurred copy of the whole radar drawn behind
+            // it. The layer only re-renders when the radar changes.
+            layer.enabled: root.hologram
+            layer.effect: MultiEffect {
+              shadowEnabled: true
+              shadowColor: root.holoGlow
+              shadowOpacity: 1
+              shadowBlur: 0.7
+              blurMax: 20
+              shadowHorizontalOffset: 0
+              shadowVerticalOffset: 0
+              brightness: 0.08
+            }
 
             // Screen positions of the last frame's dots, for hover picking.
             property var hits: []
@@ -755,9 +863,10 @@ Panel {
             width: infoColumn.implicitWidth + Style.space(20)
             height: infoColumn.implicitHeight + Style.space(14)
             radius: Style.space(6)
-            color: Qt.rgba(Commons.Color.popups.background.r, Commons.Color.popups.background.g, Commons.Color.popups.background.b, 0.78)
+            color: root.hologram ? Qt.rgba(root.holoGlow.r, root.holoGlow.g, root.holoGlow.b, 0.07)
+              : Qt.rgba(Commons.Color.popups.background.r, Commons.Color.popups.background.g, Commons.Color.popups.background.b, 0.78)
             border.width: 1
-            border.color: Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.15)
+            border.color: Qt.rgba(root.fg.r, root.fg.g, root.fg.b, root.hologram ? 0.35 : 0.15)
 
             Column {
               id: infoColumn
@@ -980,7 +1089,56 @@ Panel {
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
-          text: "drag rotate · wheel zoom · j k select · [ ] time · s scale · space spin · 0 reset · r refresh"
+          // Shrinks a little rather than run past the panel edge.
+          fontSizeMode: Text.HorizontalFit
+          minimumPixelSize: Style.font.caption - 2
+          text: "drag rotate · wheel zoom · j k select · [ ] time · s scale · space spin · g holo · 0 reset · r refresh"
+        }
+      }
+
+      // Hologram overlays, over the content and without mouse handling so
+      // clicks and drags fall through.
+      Item {
+        anchors.fill: column
+        visible: root.hologram
+        clip: true
+
+        // Scanlines, painted once per size: a static Canvas costs nothing
+        // between repaints.
+        Canvas {
+          id: scanlines
+          anchors.fill: parent
+          onWidthChanged: requestPaint()
+          onHeightChanged: requestPaint()
+          onPaint: {
+            var ctx = getContext("2d")
+            ctx.reset()
+            ctx.fillStyle = "rgba(0, 0, 0, 0.22)"
+            for (var y = 0; y < height; y += 3) ctx.fillRect(0, y, width, 1)
+          }
+        }
+
+        Rectangle {
+          id: shine
+          width: parent.width
+          height: Style.space(90)
+          y: -height
+          visible: sweep.running
+          gradient: Gradient {
+            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 0.5; color: Qt.rgba(root.holoGlow.r, root.holoGlow.g, root.holoGlow.b, 0.13) }
+            GradientStop { position: 0.56; color: Qt.rgba(1, 1, 1, 0.12) }
+            GradientStop { position: 1.0; color: "transparent" }
+          }
+
+          NumberAnimation on y {
+            id: sweep
+            running: false
+            from: -shine.height
+            to: column.height
+            duration: 1500
+            easing.type: Easing.InOutSine
+          }
         }
       }
     }
