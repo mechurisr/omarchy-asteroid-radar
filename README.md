@@ -10,7 +10,7 @@ panel draws every pass in 3D around Earth and the Moon, and you can rotate it.
 
 - **Bar pill:** distance of the next close approach, e.g. `6.1LD`. It switches
   to the bar's active colour when something will pass inside the Moon's orbit
-  within the next two days.
+  within the next two days. Set `iconOnly` to show just the comet icon.
 - **3D radar:** Earth, the Moon's orbit, the direction of the Sun, and distance
   rings on the ecliptic plane. Each asteroid's track is drawn over the days
   around its approach: the part already travelled is faint, the part still to
@@ -75,6 +75,7 @@ so a panel left open does not keep redrawing.
 | `maxDistanceLd` | `20` | Only list approaches closer than this many lunar distances |
 | `maxObjects` | `15` | Upper limit on objects shown, nearest first |
 | `hologram` | `false` | Hologram mode until it is toggled in the panel |
+| `iconOnly` | `false` | Show only the comet icon in the bar, without the distance |
 
 ## Data
 
