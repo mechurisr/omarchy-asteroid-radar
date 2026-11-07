@@ -36,6 +36,7 @@ Panel {
   readonly property int refreshHours: Math.max(1, parseInt(setting("refreshHours", 6), 10) || 6)
   readonly property real maxDistLd: Math.max(2, Math.min(80, parseFloat(setting("maxDistanceLd", 20)) || 20))
   readonly property int maxObjects: Math.max(1, Math.min(30, parseInt(setting("maxObjects", 15), 10) || 15))
+  readonly property bool iconOnly: String(setting("iconOnly", false)) === "true"
 
   // Hologram mode: a cyan monochrome palette, glow on the radar, scanlines,
   // an occasional shine and flicker. Toggled from the header, g or IPC; that
@@ -103,6 +104,7 @@ Panel {
   readonly property string glyph: "\uE26D"
 
   readonly property string label: {
+    if (iconOnly) return glyph
     if (asteroids.length === 0) return loading ? glyph + " …" : (lastError ? glyph + " —" : glyph)
     if (!nextApproach) return glyph + " " + asteroids.length
     return glyph + " " + nextApproach.distLd.toFixed(1) + "LD"

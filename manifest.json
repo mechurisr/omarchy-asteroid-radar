@@ -37,7 +37,8 @@
       "refreshHours": 6,
       "maxDistanceLd": 20,
       "maxObjects": 15,
-      "hologram": false
+      "hologram": false,
+      "iconOnly": false
     },
     "schema": [
       {
@@ -71,6 +72,12 @@
         "key": "hologram",
         "type": "boolean",
         "label": "Hologram look by default (toggle with HOLO or g)",
+        "defaultValue": false
+      },
+      {
+        "key": "iconOnly",
+        "type": "boolean",
+        "label": "Icon only (hide the distance in the bar)",
         "defaultValue": false
       }
     ]
